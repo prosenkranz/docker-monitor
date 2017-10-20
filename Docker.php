@@ -41,7 +41,7 @@ class DockerAdapter
 		if ($output === false)
 			return null;
 
-		$infos = json_decode($output, true);
+		$infos = json_decode($output);
 		if (is_array($infos) && !empty($infos))
 			return $infos[0];
 		else
@@ -70,7 +70,7 @@ class DockerAdapter
 		if (count($lines) <= 1)
 			return null;
 
-		$statistics = parseContainerStatisticsLine($lines[1]); // 0 is table head
+		$statistics = $this->parseContainerStatisticsLine($lines[1]); // 0 is table head
 		if ($statistics !== null)
 			$statistics->Timestamp = $timestamp;
 
