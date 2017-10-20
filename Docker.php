@@ -35,17 +35,32 @@ class DockerAdapter
 		return explode("\n", $output);
 	}
 
-	public function getContainerInfo($id)
+	public function getContainerInfos($ids)
 	{
-		$output = self::runCommand("docker inspect ".$id);
+		if ($ids === null)
+			return null;
+
+		if (!is_array($ids))
+			$ids = [$ids];
+
+		$output = self::runCommand("docker inspect " . implode(' ', $ids));
 		if ($output === false)
 			return null;
 
 		$infos = json_decode($output);
 		if (is_array($infos) && !empty($infos))
-			return $infos[0];
+			return $infos;
 		else
 			return null;
+	}
+
+	public function getContainerInfo($id)
+	{
+		$infos = $this->getContainerInfos([$id]);
+		if ($infos === null || count($infos) == 0)
+			return null;
+
+		return $infos[0];
 	}
 
 	protected function parseContainerStatisticsLine($outputLine)
@@ -59,10 +74,16 @@ class DockerAdapter
 		];
 	}
 
-	public function getContainerStatistics($id)
+	public function getContainerStatistics($ids)
 	{
+		if ($ids === null)
+			return null;
+
+		if (!is_array($ids))
+			$ids = [$ids];
+
 		$timestamp = time();
-		$output = self::runCommand("docker stats --no-stream ".$id);
+		$output = self::runCommand("docker stats --no-stream " . implode(' ', $ids));
 		if ($output === false)
 			return null;
 
@@ -70,9 +91,16 @@ class DockerAdapter
 		if (count($lines) <= 1)
 			return null;
 
-		$statistics = $this->parseContainerStatisticsLine($lines[1]); // 0 is table head
-		if ($statistics !== null)
-			$statistics->Timestamp = $timestamp;
+		$statistics = [];
+		for ($i = 1; $i < count($lines); ++$i)
+		{
+			$stat = $this->parseContainerStatisticsLine($lines[$i]); // 0 is table head
+			if ($stat !== null)
+			{
+				$stat->Timestamp = $timestamp;
+				$statistics[] = $stat;
+			}
+		}
 
 		return $statistics;
 	}
@@ -90,29 +118,40 @@ class Docker
 			$this->adapter = new DockerAdapter();
 	}
 
-	public function getContainer($id)
+	public function getContainers($containerIds=null)
 	{
-		$container = $this->adapter->getContainerInfo($id);
-		if ($container == null)
-			return null;
+		if ($containerIds === null)
+			$containerIds = $this->adapter->enumerateContainers();
 
-		$container->Statistics = $this->adapter->getContainerStatistics($id);
-		if ($container->Statistics)
+		if (!is_array($containerIds))
+			$containerIds = [$containerIds];
+
+		$containers = $this->adapter->getContainerInfos($containerIds);
+		if ($containers === null)
+			return [];
+
+		$statistics = $this->adapter->getContainerStatistics($containerIds);
+		foreach ($statistics as $stat)
 		{
-			// We already have the Id in the container info
-			unset($container->Statistics->Id);
+			foreach ($containers as $container)
+			{
+				if ($stat->Id === $container->Id)
+				{
+					$container->Statistics = $stat;
+					unset($container->Statistics->Id); // already have that
+					break;
+				}
+			}
 		}
 
-		return $container;
+		return $containers;
 	}
 
-	public function getContainers()
+	/**
+	 * If you want to get multiple containers at once, use more efficient getContainers() instead
+	 */
+	public function getContainer($id)
 	{
-		$containers = [];
-		$containerIds = $this->adapter->enumerateContainers();
-		foreach ($containerIds as $id)
-			$containers[] = $this->getContainer($id);
-
-		return $containers;
+		return $this->getContainers([$id]);
 	}
 }

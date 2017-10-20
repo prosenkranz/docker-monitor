@@ -19,16 +19,34 @@ class MockDockerAdapter extends DockerAdapter
 		];
 	}
 
-	public function getContainerInfo($id)
+	public function getContainerInfos($ids)
 	{
-		return (object)[
-			'Id' => $id,
-			'Name' => 'mock',
-		];
+		if ($ids === null)
+			return null;
+
+		if (!is_array($ids))
+			$ids = [$ids];
+
+		$infos = [];
+		foreach ($ids as $id)
+		{
+			$infos[] = (object)[
+				'Id' => $id,
+				'Name' => 'mock',
+			];
+		}
+
+		return $infos;
 	}
 
-	public function getContainerStatistics($id)
+	public function getContainerStatistics($ids)
 	{
+		if ($ids === null)
+			return null;
+
+		if (!is_array($ids))
+			$ids = [$ids];
+
 		$timestamp = time();
 		$output = "CONTAINER           CPU %               MEM USAGE / LIMIT     MEM %               NET I/O             BLOCK I/O           PIDS
 91fae44e0334        0.11%               1.004GiB / 19.57GiB   5.13%               128MB / 14.7MB      7.49MB / 106MB      106
@@ -42,18 +60,19 @@ ff23ace5a548        0.17%               836.7MiB / 19.57GiB   4.18%             
 f7c09191bc2a        0.17%               980.1MiB / 19.57GiB   4.89%               129MB / 14.9MB      7.44MB / 106MB      104
 2ea4d3f6a1d7        0.13%               1.007GiB / 19.57GiB   5.15%               129MB / 15.1MB      52.2MB / 107MB      104";
 
+		$statistics = [];
 		$lines = explode("\n", $output);
 		for ($i = 1; $i < count($lines); ++$i)
 		{
-			$stats = $this->parseContainerStatisticsLine($lines[$i]);
-			if ($stats->Id === $id)
+			$stat = $this->parseContainerStatisticsLine($lines[$i]);
+			if (in_array($stat->Id, $ids))
 			{
-				$stats->Timestamp = $timestamp;
-				return $stats;
+				$stat->Timestamp = $timestamp;
+				$statistics[] = $stat;
 			}
 		}
 
-		return null;
+		return $statistics;
 	}
 }
 
