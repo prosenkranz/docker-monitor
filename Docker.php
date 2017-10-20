@@ -12,7 +12,15 @@ class DockerAdapter
 {
 	protected static function runCommand($cmd)
 	{
-		return exec($cmd);
+		exec($cmd . ' 2>&1', $outputLines, $returnVal);
+		$output = implode("\n", $outputLines);
+		if ($returnVal === 1)
+		{
+			echo "[DockerAdapter] Failed run command '$cmd': " . $output;
+			return false;
+		}
+
+		return $output;
 	}
 
 	/**
@@ -21,12 +29,18 @@ class DockerAdapter
 	public function enumerateContainers()
 	{
 		$output = self::runCommand("docker ps -aq");
+		if ($output === false)
+			return [];
+
 		return explode("\n", $output);
 	}
 
 	public function getContainerInfo($id)
 	{
 		$output = self::runCommand("docker inspect ".$id);
+		if ($output === false)
+			return null;
+
 		$infos = json_decode($output, true);
 		if (is_array($infos) && !empty($infos))
 			return $infos[0];
@@ -49,6 +63,9 @@ class DockerAdapter
 	{
 		$timestamp = time();
 		$output = self::runCommand("docker stats --no-stream ".$id);
+		if ($output === false)
+			return null;
+
 		$lines = explode("\n", $output);
 		if (count($lines) <= 1)
 			return null;
