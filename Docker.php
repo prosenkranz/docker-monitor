@@ -28,7 +28,7 @@ class DockerAdapter
 	 */
 	public function enumerateContainers()
 	{
-		$output = self::runCommand("docker ps -aq");
+		$output = self::runCommand("docker ps -aq --no-trunc");
 		if ($output === false)
 			return [];
 
