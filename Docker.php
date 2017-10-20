@@ -4,7 +4,7 @@ class ParserUtils
 {
 	public static function parsePercentage($str)
 	{
-		return floatval(str_replace('%', '', trim($str)));
+		return min(100.0, floatval(str_replace('%', '', trim($str))));
 	}
 }
 
