@@ -57,6 +57,7 @@
 				hAxis: { textPosition: 'none' },
 				chartArea: { width: '80%', height: '90%' },
 				colors: [color],
+				vAxis: { ticks: [0,25,50,75,100] },
 			});
 		}
 
